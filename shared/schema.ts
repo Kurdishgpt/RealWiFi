@@ -1,18 +1,47 @@
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+// Network Settings Schema
+export const networkSettingsSchema = z.object({
+  ssid: z.string().min(1).max(32),
+  frequency: z.enum(["2.4GHz", "5GHz"]),
+  channel: z.number().min(1).max(13),
+  securityType: z.enum(["Open", "WEP", "WPA", "WPA2", "WPA3"]),
+  broadcastEnabled: z.boolean(),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+export type NetworkSettings = z.infer<typeof networkSettingsSchema>;
+
+// Device Schema
+export const deviceSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  type: z.enum(["laptop", "phone", "tablet", "iot"]),
+  x: z.number(),
+  y: z.number(),
+  signalStrength: z.number().min(0).max(100),
+  connected: z.boolean(),
 });
 
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+export type Device = z.infer<typeof deviceSchema>;
+
+export const insertDeviceSchema = deviceSchema.omit({ id: true });
+export type InsertDevice = z.infer<typeof insertDeviceSchema>;
+
+// Simulation State Schema
+export const simulationStateSchema = z.object({
+  playing: z.boolean(),
+  speed: z.number().min(1).max(4),
+  showSignalStrength: z.boolean(),
+  showChannels: z.boolean(),
+});
+
+export type SimulationState = z.infer<typeof simulationStateSchema>;
+
+// Complete Network State (for API responses)
+export const networkStateSchema = z.object({
+  settings: networkSettingsSchema,
+  devices: z.array(deviceSchema),
+  simulation: simulationStateSchema,
+});
+
+export type NetworkState = z.infer<typeof networkStateSchema>;
